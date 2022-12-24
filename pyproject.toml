@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools", "wheel", "versioneer[toml]==0.28"]
+build-backend = "setuptools.build_meta"
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440"
+versionfile_source = 'cassandra_lwt_migration_tool/version.py'
+versionfile_build = 'cassandra_lwt_migration_tool/version.py'
+tag_prefix = "version_"
+parentdir_prefix = ''
+
