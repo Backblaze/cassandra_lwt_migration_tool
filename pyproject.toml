@@ -1,12 +1,39 @@
 [build-system]
-requires = ["setuptools", "wheel", "versioneer[toml]==0.28"]
-build-backend = "setuptools.build_meta"
+requires = ['setuptools >=62', 'wheel']
+build-backend = 'setuptools.build_meta'
 
-[tool.versioneer]
-VCS = "git"
-style = "pep440"
-versionfile_source = 'cassandra_lwt_migration_tool/version.py'
-versionfile_build = 'cassandra_lwt_migration_tool/version.py'
-tag_prefix = "version_"
-parentdir_prefix = ''
+[project]
+name = 'cassandra-lwt-migration-tool'
+description = 'Tool to help resolve Cassandra LWTs during large topology changes.'
+dynamic = ['dependencies', 'version']
+readme = 'README.md'
+requires-python = '>=3.8'
+authors = [
+    {name = "Backblaze"}
+]
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: MacOS'
+]
+
+
+[project.scripts]
+cassandra_lwt_migration_tool = 'cassandra_lwt_migration_tool.cli:main'
+
+[project.optional-dependencies]
+dev = [
+    'pyre-check',
+    'black'
+]
+
+[tool.setuptools]
+packages = ['cassandra_lwt_migration_tool']
+
+[tool.setuptools.dynamic]
+dependencies = { file = 'requirements.txt' }
+version = { file = 'VERSION' }
+
+[tool.setuptools.package-data]
+cassandra_lwt_migration_tool = []
 
