@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import base64
 import dataclasses
-import uuid
-from collections import namedtuple
-from typing import Any, Dict, NamedTuple, Union, overload
-
-from cassandra.query import dict_factory
+from typing import Any, Dict, NamedTuple
 from uuid import UUID
 
+from cassandra_lwt_migration_tool.data_utils import maybe_bytes, maybe_uuid
 from .cassandra_parsed_proposal import CassandraParsedProposal
-from ..data_utils import maybe_bytes, maybe_uuid
 
+"""Type info for the named tuple from our main cassandra query."""
 CassandraPaxosRowNamedTuple = NamedTuple(
     "Row",
     [
@@ -34,8 +30,7 @@ class CassandraPaxosRow:
     """
     An instance of a PaxosRow from the system.paxos table.
 
-    cassandra blobs become hex strings and uuids
-
+    All cassandra blobs stay as bytes objects, but are serialized as hex() strings in JSON.
     """
 
     row_key: bytes  # blob
@@ -51,6 +46,13 @@ class CassandraPaxosRow:
 
     @classmethod
     def from_cassandra_row(cls, row: CassandraPaxosRowNamedTuple) -> CassandraPaxosRow:
+        """
+        Converts the named tuple the cassandra driver creates into this class.
+
+        :param row: raw namedtuple
+        :return: a new class instance
+        """
+
         return CassandraPaxosRow(
             row.row_key,
             row.cf_id,
@@ -64,6 +66,10 @@ class CassandraPaxosRow:
         )
 
     def to_json(self) -> Dict[str, Any]:
+        """
+        Converts this class to a serializable form.
+        """
+
         return {
             "row_key": self.row_key,
             "cf_id": self.cf_id,
@@ -78,6 +84,8 @@ class CassandraPaxosRow:
 
     @classmethod
     def from_json(cls, obj: Dict[str, Any]) -> CassandraPaxosRow:
+        """Converts this class from a serializable form."""
+
         return cls(
             row_key=maybe_bytes(obj["row_key"]),
             cf_id=maybe_uuid(obj["cf_id"]),

@@ -2,9 +2,9 @@ import logging
 import sys
 
 from .cassandra_on_one_node import CassandraOnOneNode
-from .options import options
-from .node_ip_file import read_cass_node_ip_file
 from .constants import *
+from .node_ip_file import read_cass_node_ip_file
+from .options import options
 
 
 def main():
@@ -39,16 +39,22 @@ def main():
 
 
 def initialize_baseline_dir():
+    """
+    Attempts to create a new baseline directory
+    """
+
     try:
         options.baseline_directory.mkdir(parents=True, exist_ok=False)
     except OSError:
-        logging.error(
-            f"Error creating baseline directory: {options.baseline_directory}"
-        )
+        logging.error(f"Error creating baseline directory: {options.baseline_directory}")
         raise
 
 
 def ensure_baseline_dir():
+    """
+    Ensures the expected baseline directory exists.
+    """
+
     if not options.baseline_directory.exists():
         raise RuntimeError(
             f"When checking completion the baseline directory must already exist: {options.baseline_directory}"

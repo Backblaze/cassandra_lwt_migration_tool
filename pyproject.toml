@@ -37,3 +37,6 @@ version = { file = 'VERSION' }
 [tool.setuptools.package-data]
 cassandra_lwt_migration_tool = []
 
+[tool.black]
+line-length = 110
+include = '/cassandra_lwt_migration_tool/.*\.py$'

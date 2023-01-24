@@ -3,6 +3,8 @@ import dataclasses
 
 @dataclasses.dataclass
 class CassandraLwtFetchResult:
+    """Represents the program's operation on a single cassandra node"""
+
     node_name: str
     node_ip: str
     succeeded: bool = False

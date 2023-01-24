@@ -11,7 +11,12 @@ OPERATION_MODE = Literal[
 ]
 
 
-class CassandraLWTMigrationToolOptions(argparse.Namespace):
+class ClmtOptions(argparse.Namespace):
+    """
+    Represents the commandline options for this program. Call populate() to fill it
+    by parsing sys.argv
+    """
+
     mode: OPERATION_MODE = "captureBaseline"
     node_ips_file_path: pathlib.Path = pathlib.Path("")
     baseline_directory: pathlib.Path = pathlib.Path("")
@@ -65,4 +70,4 @@ class CassandraLWTMigrationToolOptions(argparse.Namespace):
             ns.cassandra_password = getpass.getpass(prompt="password: ").strip()
 
 
-options = CassandraLWTMigrationToolOptions()
+options = ClmtOptions()

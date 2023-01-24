@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import base64
 import io
-from uuid import UUID
 import struct
+from uuid import UUID
 
 from cassandra_lwt_migration_tool.data_utils import maybe_bytes
 
@@ -16,13 +15,15 @@ class CassandraParsedProposal:
 
     IS_EMPTY_FIELD = 0x01
 
-    uuid: uuid.UUID
+    uuid: UUID
     partition_key: bytes
     is_empty: bool
     flags: int
     raw_bytes: bytes
 
     def __init__(self, proposal: bytes):
+        """Unpacks the raw bytes that make up the cassandra paxos proposal, to the extent that we need to."""
+
         self.raw_bytes = proposal
         proposal_reader = io.BytesIO(initial_bytes=proposal)
 
@@ -33,8 +34,10 @@ class CassandraParsedProposal:
         self.is_empty = (self.flags & self.IS_EMPTY_FIELD) == 1
 
     def to_json(self):
+        """Converts this class to a serializable form. We'll recreate it from the raw bytes in this case."""
         return {"raw_bytes": self.raw_bytes}
 
     @classmethod
     def from_json(cls, obj) -> CassandraParsedProposal:
+        """Recreates this class from the serialized raw bytes."""
         return cls(proposal=maybe_bytes(obj["raw_bytes"]))

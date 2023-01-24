@@ -1,11 +1,9 @@
 import json
 import logging
 import os
-
-from collections import namedtuple
 from datetime import datetime
 from ipaddress import ip_address
-from typing import Any, Callable, ContextManager, Dict, NamedTuple, Tuple
+from typing import Any, Callable, Dict, NamedTuple, Tuple
 
 import cassandra
 import cassandra.cluster
@@ -22,10 +20,14 @@ from .options import options
 
 
 class CassandraSingleNodeError(RuntimeError):
-    pass
+    """Represents an error connecting to one cassandra node."""
 
 
 class CassandraOnOneNode:
+    """
+    Represents operations running on a single Cassandra node. Stores a cassandra session on creation.
+    """
+
     NUM_RETRIES = 3
 
     def __init__(self, node_name: str, node_ip: str):
@@ -42,19 +44,20 @@ class CassandraOnOneNode:
             pass  # best effort.
 
     def call(self):
+        """
+        Top-level operation to be run against a given cassandra node. This mostly splits behavior
+        on the run mode chosen by the CLI.
+        """
+
         result = CassandraLwtFetchResult(self.node_name, self.node_ip)
         start = datetime.utcnow()
 
         if options.mode == CAPTURE_BASELINE:
             result.outstanding_lwts = self.capture_one_baseline()
         elif options.mode == CHECK_COMPLETION:
-            result.outstanding_lwts = self.check_completion(
-                force_baseline_file_usage=False
-            )
+            result.outstanding_lwts = self.check_completion(force_baseline_file_usage=False)
         elif options.mode == CHECK_BASELINE_COMPLETION:
-            result.outstanding_lwts = self.check_completion(
-                force_baseline_file_usage=True
-            )
+            result.outstanding_lwts = self.check_completion(force_baseline_file_usage=True)
         elif options.mode == CHECK_TARGETING_NODES:
             pass  # This is fine, since we already connected to cass.
         else:
@@ -66,6 +69,11 @@ class CassandraOnOneNode:
         return result
 
     def capture_one_baseline(self) -> int:
+        """
+        Writes a file with all the open LWTs from the system.paxos table to options.baseline_directory.
+
+        :return: The number of LWTs written
+        """
         self.node_print("Capturing baseline")
         paxos_rows = self.retrieve_all_lwts()
 
@@ -78,22 +86,30 @@ class CassandraOnOneNode:
     UPDATE_FILE_PREFIX = "update_"
 
     def check_completion(self, force_baseline_file_usage: bool) -> int:
+        """
+        Retrieves the current LWTs (paxos entries) and compares with the update baseline file
+        (if present and force_baseline_file_usage is not True) or with the original baseline file
+        contents to find the outstanding entries. The outstanding entries are stored in a separate
+        updated cache to make this faster to run.
+
+        This function expects the baseline directory and appropriate baseline files to exist.
+
+        :param force_baseline_file_usage: Whether to ignore the incremental cache file.
+        :return: The number of LWTs outstanding.
+        """
+
         self.node_print(
             f"Checking completion with {options.baseline_directory} as user {options.cassandra_username}."
         )
-        baseline_path = os.path.join(
-            options.baseline_directory, f"{self.node_name}.json"
-        )
+        baseline_path = os.path.join(options.baseline_directory, f"{self.node_name}.json")
         updated_baseline_path = os.path.join(
             options.baseline_directory,
             f"{self.UPDATE_FILE_PREFIX}{self.node_name}.json",
         )
 
-        baseline_state = None
-
         path_to_read = (
             updated_baseline_path
-            if os.path.exists(updated_baseline_path)
+            if not force_baseline_file_usage and os.path.exists(updated_baseline_path)
             else baseline_path
         )
         with open(path_to_read, "r") as fd:
@@ -105,19 +121,24 @@ class CassandraOnOneNode:
             self.node_print("Baseline captures no LWTs, so nothing to do.")
             return 0
 
+        # Retrieve a fresh snapshot of current LWTs.
         captured_rows = self.retrieve_all_lwts()
         outstanding_rows: Dict[str, CassandraPaxosRow] = {}
+
+        # determine set of baseline LWTs that are still running -- LWTs are finished if one of the following is true:
+        # 1) LWT is not in current LWTs at all
+        # 2) proposal_ballot value for LWT is null (where previously was empty or non-null)
+        # 3) in_progress_ballot value has changed
+        # NOTE: criteria 2 is "hidden" within criteria 1 by retrieveCurrentLWTs since it does not include results where proposal_ballot is null
         for map_key, row in baseline_state.rows.items():
             if (
-                (matched_row := captured_rows.rows.get(map_key, None)) is not None
-                and matched_row.in_progress_ballot == row.in_progress_ballot
-            ):
+                matched_row := captured_rows.rows.get(map_key, None)
+            ) is not None and matched_row.in_progress_ballot == row.in_progress_ballot:
                 outstanding_rows[matched_row.map_key] = matched_row
 
-        outstanding_state = CassandraPaxosRows(
-            as_of=captured_rows.as_of, rows=outstanding_rows
-        )
+        outstanding_state = CassandraPaxosRows(as_of=captured_rows.as_of, rows=outstanding_rows)
 
+        # Write an updated set of LWTs to a cache file to save time in subsequent runs.
         with open(updated_baseline_path, "w") as fd:
             json.dump(outstanding_state.to_json(), fd, cls=ClmtJsonEncoder)
 
@@ -126,17 +147,12 @@ class CassandraOnOneNode:
 
     def raise_if_not_connected_to_ip(self):
         """
-        Raises an exception if cassandra is not connected to the host it is expceted to be.
+        Raises an exception if cassandra is not connected to the host it is expected to be.
 
-        :param cassandra_session: Cassandra session.
-        :param node_name: Cassandra node hostname
-        :param node_ip: Cassandra node ip
-        :raises CassandraSingleNodeError
+        :raises CassandraSingleNodeError: if not connected.
         """
 
-        prepared_stmt = self.session.prepare(
-            "select key, data_center, listen_address from system.local"
-        )
+        prepared_stmt = self.session.prepare("select key, data_center, listen_address from system.local")
         bound_stmt = prepared_stmt.bind()
 
         result_set = self.session.execute(bound_stmt)
@@ -212,7 +228,7 @@ class CassandraOnOneNode:
         fetch_policy: CassandraFetchPolicy = CassandraFetchPolicy(),
     ) -> None:
         """
-        Calls a callable on each row from the given token range. Configurable with regards
+        Calls a callable on each row from the given token range. Configurable in regard
         to what happens when data cannot be fetched.
 
         :param token_range: The token bounds to visit.
@@ -230,9 +246,7 @@ class CassandraOnOneNode:
                 if last_row_key is None:
                     stmt = self.session.prepare(full_query).bind(token_range)
                 else:
-                    stmt = self.session.prepare(pickup_query).bind(
-                        (last_row_key, token_range[1])
-                    )
+                    stmt = self.session.prepare(pickup_query).bind((last_row_key, token_range[1]))
 
                 stmt.fetch_size = fetch_policy.fetch_size
 
@@ -258,7 +272,9 @@ class CassandraOnOneNode:
                 continue
 
     def node_print(self, msg: str) -> None:
+        """logs a message with the node information annotated."""
         logging.info(f"\tNode {self.node_name} [{self.node_ip}]: {msg}")
 
     def node_print_exc(self, e: RuntimeError):
+        """Logs an exception with the node information annotated."""
         logging.warning(f"{self.node_name} [{self.node_ip}]: {e}", stack_info=True)

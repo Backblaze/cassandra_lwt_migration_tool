@@ -2,6 +2,13 @@ from typing import Dict
 
 
 def read_cass_node_ip_file(path: str) -> Dict[str, str]:
+    """
+    Reads a simple file format with a node address, a space and a node IP.
+
+    :param path: A str containing a path to read the file from
+    :returns: A dict from hostname to node_ip
+    """
+
     node_ips: Dict[str, str] = {}
 
     with open(path, "r") as fd:
