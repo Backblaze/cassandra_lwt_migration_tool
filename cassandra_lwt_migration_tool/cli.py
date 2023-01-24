@@ -11,14 +11,15 @@ def main():
     options.populate()
 
     from imp import reload
+
     reload(logging)
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s [%(process)d] %(filename)s:%(lineno)d (%(levelname)s) %(message)s',
+        format="%(asctime)s [%(process)d] %(filename)s:%(lineno)d (%(levelname)s) %(message)s",
         stream=sys.stdout,
     )
 
-    logging.info('Initialized.')
+    logging.info("Initialized.")
 
     node_ips = read_cass_node_ip_file(options.node_ips_file_path)
 
@@ -29,7 +30,7 @@ def main():
     elif options.mode in (CHECK_COMPLETION, CHECK_BASELINE_COMPLETION):
         ensure_baseline_dir()
     else:
-        raise ValueError(f'Unknown operation mode: {options.mode}')
+        raise ValueError(f"Unknown operation mode: {options.mode}")
 
     for node_name, node_ip in node_ips.items():
         # TODO: Make this a thread pool.
@@ -41,11 +42,14 @@ def initialize_baseline_dir():
     try:
         options.baseline_directory.mkdir(parents=True, exist_ok=False)
     except OSError:
-        logging.error(f'Error creating baseline directory: {options.baseline_directory}')
+        logging.error(
+            f"Error creating baseline directory: {options.baseline_directory}"
+        )
         raise
 
 
 def ensure_baseline_dir():
     if not options.baseline_directory.exists():
         raise RuntimeError(
-            f'When checking completion the baseline directory must already exist: {options.baseline_directory}')
+            f"When checking completion the baseline directory must already exist: {options.baseline_directory}"
+        )

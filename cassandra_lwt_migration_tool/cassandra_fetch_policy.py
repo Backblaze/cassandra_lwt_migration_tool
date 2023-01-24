@@ -20,16 +20,17 @@ class CassandraFetchPolicy:
         :param rows_fetched: # of rows successfully fetched.
         """
 
-        logging.debug('Fetched %s rows', rows_fetched)
+        logging.debug("Fetched %s rows", rows_fetched)
         if self.fetch_size <= rows_fetched:
-            self.fetch_size = min(self.MAX_SIZE,
-                                  max(self.fetch_size + 1,
-                                      int((self.fetch_size * 11) / 10)))
+            self.fetch_size = min(
+                self.MAX_SIZE,
+                max(self.fetch_size + 1, int((self.fetch_size * 11) / 10)),
+            )
 
     def on_failure(self):
         """
         Should be called if a query fails. Decreases fetch size by 50%.
         """
 
-        logging.debug('Failed to fetch %s rows', self.fetch_size)
+        logging.debug("Failed to fetch %s rows", self.fetch_size)
         self.fetch_size = max(self.MIN_SIZE, int(self.fetch_size / 2))

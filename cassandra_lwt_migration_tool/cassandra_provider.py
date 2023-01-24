@@ -11,14 +11,17 @@ from .options import options
 
 
 @contextlib.contextmanager
-def cassandra_cluster_for_node(node_ip: str) -> Generator[cassandra.cluster.Cluster, None, None]:
+def cassandra_cluster_for_node(
+    node_ip: str,
+) -> Generator[cassandra.cluster.Cluster, None, None]:
     auth = cassandra.auth.PlainTextAuthProvider(
-        username=options.cassandra_username,
-        password=options.cassandra_password
+        username=options.cassandra_username, password=options.cassandra_password
     )
 
     execution_profile = cassandra.cluster.ExecutionProfile(
-        load_balancing_policy=cassandra.policies.WhiteListRoundRobinPolicy(hosts=[node_ip]),
+        load_balancing_policy=cassandra.policies.WhiteListRoundRobinPolicy(
+            hosts=[node_ip]
+        ),
         consistency_level=cassandra.cluster.ConsistencyLevel.ONE,
         serial_consistency_level=cassandra.cluster.ConsistencyLevel.LOCAL_SERIAL,
         retry_policy=cassandra.policies.NeverRetryPolicy,
@@ -28,9 +31,7 @@ def cassandra_cluster_for_node(node_ip: str) -> Generator[cassandra.cluster.Clus
     profiles = {node_ip: execution_profile}
 
     cluster = cassandra.cluster.Cluster(
-        execution_profiles=profiles,
-        contact_points=[node_ip],
-        auth_provider=auth
+        execution_profiles=profiles, contact_points=[node_ip], auth_provider=auth
     )
 
     cluster.protocol_version = cassandra.ProtocolVersion.V4
@@ -45,12 +46,14 @@ def cassandra_session_for_node(node_ip: str) -> Iterator[cassandra.cluster.Sessi
         yield session
 
 
-def token_ranges(cass_session: cassandra.cluster.Session) -> List[Tuple[cassandra.metadata.Token, cassandra.metadata.Token]]:
+def token_ranges(
+    cass_session: cassandra.cluster.Session,
+) -> List[Tuple[cassandra.metadata.Token, cassandra.metadata.Token]]:
     token_map: cassandra.metadata.TokenMap = cass_session.cluster.metadata.token_map
     tok_ranges: Set[Tuple[cassandra.metadata.Token, cassandra.metadata.Token]] = set()
 
     if len(token_map.ring) <= 1:
-        raise ValueError('Cannot build token ranges for ring with only one token.')
+        raise ValueError("Cannot build token ranges for ring with only one token.")
     else:
         for i in range(len(token_map.ring)):
             start = token_map.ring[i].value
@@ -64,8 +67,3 @@ def token_ranges(cass_session: cassandra.cluster.Session) -> List[Tuple[cassandr
                 tok_ranges.add((start, fin))
 
     return list(sorted(tok_ranges, key=lambda r: r[0]))
-
-
-
-
-
