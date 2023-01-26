@@ -3,17 +3,12 @@ import logging
 import os
 from datetime import datetime
 from ipaddress import ip_address
-from typing import Any, Callable, Dict, NamedTuple, Tuple
+from typing import Dict
 
-import cassandra
-import cassandra.cluster
-import cassandra.metadata
-
-from .cassandra_fetch_policy import CassandraFetchPolicy
-from .cassandra_provider import cassandra_session_for_node, token_ranges
+from .cassandra_provider import cassandra_session_for_node
 from .constants import *
 from .data.cassandra_lwt_fetch_result import CassandraLwtFetchResult
-from .data.cassandra_paxos_row import CassandraPaxosRow, CassandraPaxosRowNamedTuple
+from .data.cassandra_paxos_row import CassandraPaxosRow
 from .data.cassandra_paxos_rows import CassandraPaxosRows
 from .json_helper import ClmtJsonEncoder
 from .options import options
@@ -190,7 +185,6 @@ class CassandraOnOneNode:
             "proposal",
             "proposal_ballot",
             "proposal_version",
-            "TOKEN(row_key)",
         ]
 
         query_str = f'SELECT {", ".join(column_names)} FROM system.paxos'
@@ -209,58 +203,6 @@ class CassandraOnOneNode:
         self.node_print(f"Finished executing in {delta:.0f}ms: {query_str}")
 
         return CassandraPaxosRows(as_of=start_time, rows=paxos_rows)
-
-    def visit_token_range(
-        self,
-        token_range: Tuple[cassandra.metadata.Token, cassandra.metadata.Token],
-        full_query: str,
-        pickup_query: str,
-        visitor: Callable[[NamedTuple], Any],
-        fetch_policy: CassandraFetchPolicy = CassandraFetchPolicy(),
-    ) -> None:
-        """
-        Calls a callable on each row from the given token range. Configurable in regard
-        to what happens when data cannot be fetched.
-
-        :param token_range: The token bounds to visit.
-        :param full_query: The query for the full dataset.
-        :param pickup_query: The query that is used to resume partial dataset fetches.
-        :param visitor: A callable that is run on each row.
-        :param fetch_policy: Configure fetch behavior.
-        :return:
-        """
-
-        last_row_key = None
-
-        for retry in range(self.NUM_RETRIES):
-            try:
-                if last_row_key is None:
-                    stmt = self.session.prepare(full_query).bind(token_range)
-                else:
-                    stmt = self.session.prepare(pickup_query).bind((last_row_key, token_range[1]))
-
-                stmt.fetch_size = fetch_policy.fetch_size
-
-                self.node_print(f"Executing statement [{stmt}]")
-                result_set: cassandra.cluster.ResultSet = self.session.execute(stmt)
-
-                rows_visited = 0
-                for row in result_set:
-                    visitor(row)
-                    last_row_key = row.row_key
-                    rows_visited += 1
-
-                fetch_policy.on_success(rows_visited)
-                break
-            except cassandra.DriverException:
-                fetch_policy.on_failure()
-                logging.warning(
-                    "Error fetching the next set of rows... last_row: %s token_range: %s",
-                    last_row_key,
-                    token_range,
-                    exc_info=True,
-                )
-                continue
 
     def node_print(self, msg: str) -> None:
         """logs a message with the node information annotated."""

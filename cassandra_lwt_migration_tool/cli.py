@@ -1,7 +1,7 @@
 import logging
 import sys
 from asyncio import Future
-from concurrent.futures import Executor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 from .cassandra_on_one_node import CassandraOnOneNode

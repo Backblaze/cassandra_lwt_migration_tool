@@ -56,34 +56,3 @@ def cassandra_session_for_node(node_ip: str) -> Iterator[cassandra.cluster.Sessi
     with cassandra_cluster_for_node(node_ip) as cluster:
         session = cluster.connect()
         yield session
-
-
-def token_ranges(
-    cass_session: cassandra.cluster.Session,
-) -> List[Tuple[cassandra.metadata.Token, cassandra.metadata.Token]]:
-    """
-    Returns the token ranges that Cassandra knows about. The java driver has this built in,
-    but the python one does not.
-
-    :param cass_session: Cassandra session to use.
-    :return: The list of token ranges.
-    """
-
-    token_map: cassandra.metadata.TokenMap = cass_session.cluster.metadata.token_map
-    tok_ranges: Set[Tuple[cassandra.metadata.Token, cassandra.metadata.Token]] = set()
-
-    if len(token_map.ring) <= 1:
-        raise ValueError("Cannot build token ranges for ring with only one token.")
-    else:
-        for i in range(len(token_map.ring)):
-            start = token_map.ring[i].value
-            nxt_idx: int = (i + 1) % len(token_map.ring)
-            fin = token_map.ring[nxt_idx].value
-
-            if i == (len(token_map.ring) - 1):
-                tok_ranges.add((start, cassandra.metadata.MAX_LONG))
-                tok_ranges.add((cassandra.metadata.MIN_LONG, fin))
-            else:
-                tok_ranges.add((start, fin))
-
-    return list(sorted(tok_ranges, key=lambda r: r[0]))

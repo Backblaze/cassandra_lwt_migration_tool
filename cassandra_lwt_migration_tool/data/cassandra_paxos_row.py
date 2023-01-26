@@ -20,7 +20,6 @@ CassandraPaxosRowNamedTuple = NamedTuple(
         ("proposal", bytes),
         ("proposal_ballot", UUID),
         ("proposal_version", int),
-        ("system_token_row_key", int),
     ],
 )
 
