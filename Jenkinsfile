@@ -40,7 +40,7 @@ pipeline {
 
         stage('Lint') {
             steps {
-                sh 'venv/bin/black --check source'
+                sh 'venv/bin/black --check .'
                 sh 'venv/bin/pyre check'
             }
         }
