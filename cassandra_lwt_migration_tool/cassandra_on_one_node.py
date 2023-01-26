@@ -43,7 +43,7 @@ class CassandraOnOneNode:
             self.node_print(msg=f"{e}")
             pass  # best effort.
 
-    def call(self):
+    def call(self) -> CassandraLwtFetchResult:
         """
         Top-level operation to be run against a given cassandra node. This mostly splits behavior
         on the run mode chosen by the CLI.
@@ -64,7 +64,7 @@ class CassandraOnOneNode:
             raise ValueError(f"Unknown mode of operations: {options.mode}")
 
         result.succeeded = True
-        result.operation_time_ms = int((datetime.utcnow() - start).seconds * 1000)
+        result.operation_time_ms = int((datetime.utcnow() - start).total_seconds() * 1000)
 
         return result
 
@@ -180,12 +180,6 @@ class CassandraOnOneNode:
         start_time = datetime.utcnow()
         paxos_rows: Dict[str, CassandraPaxosRow] = {}
 
-        def visit_row(row: CassandraPaxosRowNamedTuple):
-            # We only care about rows with a non-null value in this field.
-            if row.proposal_ballot is not None:
-                paxos_row: CassandraPaxosRow = CassandraPaxosRow.from_cassandra_row(row)
-                paxos_rows[paxos_row.map_key] = paxos_row
-
         column_names = [
             "row_key",
             "cf_id",
@@ -199,23 +193,20 @@ class CassandraOnOneNode:
             "TOKEN(row_key)",
         ]
 
-        full_range_query = (
-            f'SELECT {", ".join(column_names)} FROM system.paxos '
-            + "WHERE TOKEN(row_key) > ? AND TOKEN(row_key) <= ?;"
-        )
+        query_str = f'SELECT {", ".join(column_names)} FROM system.paxos'
 
-        pickup_range_query = (
-            f'SELECT {", ".join(column_names)} FROM system.paxos '
-            + "WHERE TOKEN(row_key) >= TOKEN(?) AND TOKEN(row_key) <= ?;"
-        )
+        stmt = self.session.prepare(query_str).bind(tuple())
 
-        for token_range in token_ranges(self.session):
-            self.visit_token_range(
-                token_range=token_range,
-                full_query=full_range_query,
-                pickup_query=pickup_range_query,
-                visitor=visit_row,
-            )
+        rows = self.session.execute(stmt)
+        for row in self.session.execute(stmt):
+            # We only care about non-null proposal rows.
+            if row.proposal_ballot is not None:
+                paxos_row: CassandraPaxosRow = CassandraPaxosRow.from_cassandra_row(row)
+                if not paxos_row.parsed_proposal.is_empty:
+                    paxos_rows[paxos_row.map_key] = paxos_row
+
+        delta = (datetime.utcnow() - start_time).total_seconds() * 1000
+        self.node_print(f"Finished executing in {delta:.0f}ms: {query_str}")
 
         return CassandraPaxosRows(as_of=start_time, rows=paxos_rows)
 
