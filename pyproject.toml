@@ -23,12 +23,15 @@ cassandra_lwt_migration_tool = 'cassandra_lwt_migration_tool.cli:main'
 
 [project.optional-dependencies]
 dev = [
+    'black',
+    'build',
     'pyre-check',
-    'black'
+    'twine'
 ]
 
 [tool.setuptools]
-packages = ['cassandra_lwt_migration_tool']
+packages = ['cassandra_lwt_migration_tool',
+            'cassandra_lwt_migration_tool.data']
 
 [tool.setuptools.dynamic]
 dependencies = { file = 'requirements.txt' }

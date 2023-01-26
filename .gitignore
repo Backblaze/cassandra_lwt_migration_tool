@@ -1,2 +1,8 @@
 **__pycache__**
 *.iml
+/dist
+/venv
+/build
+/*.egg-info**
+/.idea
+/.pyre
