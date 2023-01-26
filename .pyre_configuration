@@ -1,9 +1,14 @@
 {
   "site_package_search_strategy": "pep561",
   "source_directories": [
-    "cassandra_lwt_migration_tool"
+    {
+      "import_root": ".",
+      "source": "cassandra_lwt_migration_tool"
+    }
   ],
   "search_path": [
-    {"site-package": "cassandra"}
+    {
+      "site-package": "cassandra"
+    }
   ]
 }
