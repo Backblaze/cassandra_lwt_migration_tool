@@ -31,7 +31,7 @@ pipeline {
 
         stage('Virtual Environment') {
             environment {
-                PYTHON = '/usr/local/bin/python3'
+                PYTHON = '/usr/local/bin/python3.9'
             }
             steps {
                 sh "./create_venv.sh"
