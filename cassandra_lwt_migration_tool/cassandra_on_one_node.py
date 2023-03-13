@@ -126,9 +126,8 @@ class CassandraOnOneNode:
         # 3) in_progress_ballot value has changed
         # NOTE: criteria 2 is "hidden" within criteria 1 by retrieveCurrentLWTs since it does not include results where proposal_ballot is null
         for map_key, row in baseline_state.rows.items():
-            if (
-                matched_row := captured_rows.rows.get(map_key, None)
-            ) is not None and matched_row.in_progress_ballot == row.in_progress_ballot:
+            matched_row = captured_rows.rows.get(map_key, None)
+            if matched_row is not None and matched_row.in_progress_ballot == row.in_progress_ballot:
                 outstanding_rows[matched_row.map_key] = matched_row
 
         outstanding_state = CassandraPaxosRows(as_of=captured_rows.as_of, rows=outstanding_rows)
