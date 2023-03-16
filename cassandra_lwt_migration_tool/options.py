@@ -2,15 +2,16 @@ import argparse
 import getpass
 import pathlib
 from typing import Union
+
 # from typing import Literal
 
-# uncomment in the future for 3.8 
-#OPERATION_MODE = Literal[
+# uncomment in the future for 3.8
+# OPERATION_MODE = Literal[
 #    "captureBaseline",
 #    "checkCompletion",
 #    "checkBaselineCompletion",
 #    "checkTargetingNodes",
-#]
+# ]
 
 
 class ClmtOptions(argparse.Namespace):
@@ -19,7 +20,7 @@ class ClmtOptions(argparse.Namespace):
     by parsing sys.argv
     """
 
-#    mode: OPERATION_MODE = "captureBaseline"
+    #    mode: OPERATION_MODE = "captureBaseline"
     node_ips_file_path: pathlib.Path = pathlib.Path("")
     baseline_directory: pathlib.Path = pathlib.Path("")
     cassandra_username: Union[str, None] = ""
