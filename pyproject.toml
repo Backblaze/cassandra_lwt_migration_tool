@@ -7,7 +7,7 @@ name = 'cassandra-lwt-migration-tool'
 description = 'Tool to help resolve Cassandra LWTs during large topology changes.'
 dynamic = ['dependencies', 'version']
 readme = 'README.md'
-requires-python = '>=3.8'
+requires-python = '>=3.7'
 authors = [
     {name = "Backblaze"}
 ]
