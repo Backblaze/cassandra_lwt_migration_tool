@@ -5,7 +5,7 @@ pipeline {
 
     environment{
         SLACK_CHANNEL = '#platform-engineering-ci'
-        PRIVATE_PYPI = "https://mirror-sac0-0000.backblaze.com/pypi/bz/uploads"
+        PRIVATE_PYPI = "https://devpi-sac0.backblaze.com/bz/uploads"
 
     }
 
